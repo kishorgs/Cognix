@@ -1,22 +1,60 @@
-// Simple Firebase initialization.
-// Replace the config values below or set the corresponding REACT_APP_* env vars.
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  PhoneAuthProvider,
+  RecaptchaVerifier
+} from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY || 'REPLACE_WITH_API_KEY',
-  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || 'REPLACE_WITH_AUTH_DOMAIN',
-  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID || 'REPLACE_WITH_PROJECT_ID',
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || 'REPLACE_WITH_STORAGE_BUCKET',
-  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || 'REPLACE_WITH_MESSAGING_SENDER_ID',
-  appId: process.env.REACT_APP_FIREBASE_APP_ID || 'REPLACE_WITH_APP_ID',
+  apiKey: "AIzaSyChdLYqbQuzIEhZFv0o2LRY3l2tSN9LPLA",
+  authDomain: "cognix-25436.firebaseapp.com",
+  projectId: "cognix-25436",
+  storageBucket: "cognix-25436.appspot.com",
+  messagingSenderId: "879124327677",
+  appId: "1:879124327677:web:b4453e07e8b9baee06a294"
 };
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
 
-// Note: For production, store credentials in environment variables or secret manager.
-// Example .env (at project root):
-// REACT_APP_FIREBASE_API_KEY=your_api_key
-// REACT_APP_FIREBASE_AUTH_DOMAIN=your_auth_domain
-// ...
+// Helper to setup reCAPTCHA verifier for phone auth
+export const setupRecaptcha = (containerId) => {
+  try {
+    // Clear any existing instances
+    if (window.recaptchaVerifier) {
+      window.recaptchaVerifier.clear();
+      window.recaptchaVerifier = null;
+    }
+
+    // Create new instance
+    const recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
+      size: 'normal',
+      callback: (response) => {
+        console.log('reCAPTCHA solved with response:', response);
+        // Enable your submit button here if needed
+      },
+      'expired-callback': () => {
+        console.log('reCAPTCHA expired');
+        // Handle expiration - maybe show a message to refresh
+        if (window.recaptchaVerifier) {
+          window.recaptchaVerifier.clear();
+          window.recaptchaVerifier = null;
+        }
+        setupRecaptcha(containerId); // Reset the widget
+      }
+    });
+    
+    // Render the reCAPTCHA widget
+    recaptchaVerifier.render().then(() => {
+      console.log('reCAPTCHA rendered successfully');
+      window.recaptchaVerifier = recaptchaVerifier;
+    });
+    
+    return recaptchaVerifier;
+  } catch (error) {
+    console.error('reCAPTCHA setup error:', error);
+    throw new Error(`Failed to initialize reCAPTCHA: ${error.message}`);
+  }
+};

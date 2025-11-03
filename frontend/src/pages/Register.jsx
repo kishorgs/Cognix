@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../services/firebase';
+import AuthMethods from '../components/AuthMethods';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -17,6 +18,11 @@ export default function Register() {
     document.cookie = `authToken=${token}; path=/; max-age=${maxAge}`;
   };
 
+  const handleAuthSuccess = (token) => {
+    setAuthCookie(token);
+    navigate('/dashboard');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -27,8 +33,7 @@ export default function Register() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const token = await userCredential.user.getIdToken();
-      setAuthCookie(token);
-      navigate('/dashboard');
+      handleAuthSuccess(token);
     } catch (err) {
       setError(err?.message || 'Registration failed');
     } finally {
@@ -71,6 +76,12 @@ export default function Register() {
                 </button>
               </div>
             </form>
+
+            <AuthMethods 
+              onSuccess={handleAuthSuccess}
+              onError={setError}
+              mode="register"
+            />
 
             <p className="mt-6 text-center text-sm text-slate-500">
               Already have an account? <Link to="/login" className="text-rose-600 font-medium">Sign in</Link>

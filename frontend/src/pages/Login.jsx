@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../services/firebase';
+import AuthMethods from '../components/AuthMethods';
 
 // A polished login UI using Tailwind CSS. Keeps existing firebase behavior.
 
@@ -41,6 +42,11 @@ export default function Login() {
     }
   };
 
+  const handleAuthSuccess = (token) => {
+    setAuthCookie(token);
+    navigate('/dashboard');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -55,8 +61,7 @@ export default function Login() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       const token = await user.getIdToken();
-      setAuthCookie(token);
-      navigate('/dashboard');
+      handleAuthSuccess(token);
     } catch (err) {
       const msg = err?.message || 'Login failed';
       setError(msg);
@@ -142,22 +147,11 @@ export default function Login() {
               </div>
             </form>
 
-            <div className="my-6 flex items-center gap-3">
-              <div className="flex-1 h-px bg-slate-200" />
-              <div className="text-sm text-slate-400">or continue with</div>
-              <div className="flex-1 h-px bg-slate-200" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <button className="py-2 rounded-lg border flex items-center justify-center gap-2 text-sm hover:bg-slate-50">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.9 0 6.6 1.7 8.1 3.1l6-5.8C34.8 3.9 29.8 2 24 2 14.8 2 6.9 7.6 3.1 15.6l7.2 5.6C12.9 15 18.1 9.5 24 9.5z"/></svg>
-                Google
-              </button>
-              <button className="py-2 rounded-lg border flex items-center justify-center gap-2 text-sm hover:bg-slate-50">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M22 12a10 10 0 11-20 0 10 10 0 0120 0z"/></svg>
-                GitHub
-              </button>
-            </div>
+            <AuthMethods 
+              onSuccess={handleAuthSuccess}
+              onError={setError}
+              mode="login"
+            />
 
             <p className="mt-6 text-center text-sm text-slate-500">
               Don't have an account? <Link to="/register" className="text-sky-600 font-medium">Create one</Link>
