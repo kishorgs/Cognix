@@ -5,6 +5,7 @@ import {
   PhoneAuthProvider,
   RecaptchaVerifier
 } from 'firebase/auth';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyChdLYqbQuzIEhZFv0o2LRY3l2tSN9LPLA",
@@ -17,6 +18,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
 
 // Helper to setup reCAPTCHA verifier for phone auth
