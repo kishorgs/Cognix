@@ -13,7 +13,39 @@ export default function FileUpload() {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [parsedContent, setParsedContent] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   const fileInputRef = useRef(null);
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    
+    setIsSearching(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: searchQuery,
+          top_k: 5
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSearchResults(data.results);
+      } else {
+        console.error('Error searching documents:', await response.text());
+      }
+    } catch (error) {
+      console.error('Error calling search API:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   // Load saved files from localStorage on component mount
   useEffect(() => {
@@ -113,6 +145,36 @@ export default function FileUpload() {
 
           // Parse document content
           const content = await parseDocContent(file);
+
+          // Process with AI service
+          try {
+            const response = await fetch('http://localhost:5000/api/process-document', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                text: content,
+                metadata: {
+                  filename: file.name,
+                  type: file.type,
+                  size: fileSizeInMB,
+                }
+              })
+            });
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error('Error processing document with AI service:', errorText);
+              throw new Error(`Failed to process document: ${errorText}`);
+            }
+
+            const result = await response.json();
+            console.log('Document processed successfully:', result);
+          } catch (error) {
+            console.error('Error calling AI service:', error);
+            // Don't throw the error to allow other files to be processed
+          }
 
           // Create file object with metadata
           const fileObject = {
@@ -294,29 +356,76 @@ export default function FileUpload() {
         </div>
       )}
 
-      {selectedFile && (
-        <div className="mt-6 p-4 bg-white rounded-xl shadow-lg">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium text-gray-900">
-              Document Content: {selectedFile.name}
-            </h3>
+      <div className="mt-6 space-y-6">
+        {/* Search Section */}
+        <div className="bg-white rounded-xl shadow-lg p-4">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Search Documents</h3>
+          <div className="flex space-x-4">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Enter your search query..."
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            />
             <button
-              onClick={() => {
-                setSelectedFile(null);
-                setParsedContent('');
-              }}
-              className="text-gray-500 hover:text-gray-700"
+              onClick={handleSearch}
+              disabled={isSearching || !searchQuery.trim()}
+              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
             >
-              Close
+              {isSearching ? 'Searching...' : 'Search'}
             </button>
           </div>
-          <div className="max-h-96 overflow-y-auto">
-            <pre className="whitespace-pre-wrap text-sm text-gray-600 font-mono bg-gray-50 p-4 rounded">
-              {parsedContent || 'No content available'}
-            </pre>
-          </div>
+
+          {/* Search Results */}
+          {searchResults.length > 0 && (
+            <div className="mt-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Search Results:</h4>
+              <div className="space-y-3">
+                {searchResults.map((result, index) => (
+                  <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-sm text-gray-900">{result.text.substring(0, 200)}...</p>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-xs text-gray-500">
+                        Similarity: {(1 - result.similarity).toFixed(4)}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        File: {result.metadata.filename}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Document Content Viewer */}
+        {selectedFile && (
+          <div className="bg-white rounded-xl shadow-lg p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900">
+                Document Content: {selectedFile.name}
+              </h3>
+              <button
+                onClick={() => {
+                  setSelectedFile(null);
+                  setParsedContent('');
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                Close
+              </button>
+            </div>
+            <div className="max-h-96 overflow-y-auto">
+              <pre className="whitespace-pre-wrap text-sm text-gray-600 font-mono bg-gray-50 p-4 rounded">
+                {parsedContent || 'No content available'}
+              </pre>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
