@@ -3,6 +3,7 @@ import * as pdfjs from 'pdfjs-dist';
 import { Document as DocxDocument } from 'docx';
 import mammoth from 'mammoth';
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.entry';
+import apiService from '../services/api';
 
 // Initialize PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
@@ -148,28 +149,14 @@ export default function FileUpload() {
 
           // Process with AI service
           try {
-            const response = await fetch('http://localhost:5000/api/process-document', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                text: content,
-                metadata: {
-                  filename: file.name,
-                  type: file.type,
-                  size: fileSizeInMB,
-                }
-              })
-            });
-
-            if (!response.ok) {
-              const errorText = await response.text();
-              console.error('Error processing document with AI service:', errorText);
-              throw new Error(`Failed to process document: ${errorText}`);
-            }
-
-            const result = await response.json();
+            const result = await apiService.processDocument(
+              content,
+              {
+                filename: file.name,
+                type: file.type,
+                size: fileSizeInMB,
+              }
+            );
             console.log('Document processed successfully:', result);
           } catch (error) {
             console.error('Error calling AI service:', error);
